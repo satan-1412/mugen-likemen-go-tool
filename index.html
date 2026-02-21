@@ -2,151 +2,119 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MUGEN / IKEMEN GO 专业工具箱</title>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
     <style>
         /* ================= 核心全局样式与变量 ================= */
         :root {
             --bg-base: #0D0D12;
             --bg-surface: #1A1A24;
             --bg-surface-hover: #262636;
-            --accent-color: #00E5FF; /* 高端青色科技感 */
+            --accent-color: #00E5FF; 
             --accent-glow: rgba(0, 229, 255, 0.3);
             --text-main: #E2E8F0;
             --text-muted: #8F9BA8;
             --border-color: #30363D;
-            --danger: #FF4D4F;
-            --success: #10B981;
             --font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
             --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
+        * { box-sizing: border-box; }
+
         body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            font-family: var(--font-family);
-            overflow-x: hidden;
+            margin: 0; padding: 0; background-color: var(--bg-base);
+            color: var(--text-main); font-family: var(--font-family); overflow-x: hidden;
         }
 
         /* 顶部导航栏 */
         header {
-            background-color: var(--bg-surface);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            background-color: var(--bg-surface); border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5); position: sticky; top: 0; z-index: 100;
         }
 
-        .logo-area {
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: 2px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .logo-area { font-size: 1.5rem; font-weight: 700; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .logo-accent { color: var(--accent-color); text-shadow: 0 0 10px var(--accent-glow); }
+        .header-info { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.85rem; color: var(--text-muted); }
 
         /* ================= 视图切换系统 ================= */
-        .view-container { display: none; padding: 2rem; max-width: 1600px; margin: 0 auto; animation: fadeIn 0.4s ease; }
+        .view-container { display: none; padding: 2rem; max-width: 1600px; margin: 0 auto; animation: fadeIn 0.3s ease; }
         .view-active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* ================= 主菜单面板 (Dashboard) ================= */
-        .tool-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-
+        .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
         .tool-card {
-            background-color: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 2rem 1.5rem;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
+            background-color: var(--bg-surface); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 2rem 1.5rem; cursor: pointer; transition: var(--transition);
+            display: flex; flex-direction: column; align-items: center; text-align: center;
         }
-
-        .tool-card:hover:not(.disabled) {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 20px var(--accent-glow);
-            transform: translateY(-5px);
-        }
-
+        .tool-card:hover:not(.disabled) { border-color: var(--accent-color); box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-5px); }
         .tool-card.disabled { opacity: 0.5; cursor: default; }
-        
         .tool-icon { font-size: 3rem; margin-bottom: 1rem; color: var(--accent-color); }
         .tool-name { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
         .tool-desc { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
 
         /* ================= 工具内部通用组件 ================= */
         .tool-header { display: flex; align-items: center; margin-bottom: 1.5rem; gap: 15px; }
-        .btn-back {
-            background: none; border: 1px solid var(--border-color); color: var(--text-main);
-            padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: var(--transition);
-        }
+        .tool-header h2 { margin: 0; font-size: 1.6rem; }
+        .btn-back { background: none; border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: var(--transition); white-space: nowrap; }
         .btn-back:hover { background: var(--bg-surface-hover); color: var(--accent-color); }
-
-        .btn {
-            background-color: var(--bg-surface); border: 1px solid var(--border-color);
-            color: var(--text-main); padding: 10px 20px; border-radius: 4px;
-            cursor: pointer; font-weight: 600; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px;
-        }
+        
+        .btn { background-color: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
         .btn:hover { background-color: var(--bg-surface-hover); border-color: var(--accent-color); }
         .btn-primary { background-color: var(--accent-color); color: #000; border: none; }
         .btn-primary:hover { background-color: #00b3cc; box-shadow: 0 0 15px var(--accent-glow); }
 
+        .form-select { background-color: var(--bg-surface-hover); color: var(--text-main); border: 1px solid var(--border-color); padding: 7px 10px; border-radius: 4px; outline: none; font-size: 0.85rem; }
+        .form-select:focus { border-color: var(--accent-color); }
+
         /* ================= 工具区：出招表生成器专属样式 ================= */
-        .workspace-split { display: grid; grid-template-columns: 1fr 350px 1fr; gap: 20px; height: 70vh; }
-        @media (max-width: 1200px) { .workspace-split { grid-template-columns: 1fr; height: auto; } }
-
-        .editor-panel {
-            background-color: var(--bg-surface); border: 1px solid var(--border-color);
-            border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
-        }
+        .workspace-split { display: grid; grid-template-columns: 1fr 320px 1fr; gap: 20px; height: calc(100vh - 180px); min-height: 600px; }
         
-        .panel-header {
-            background-color: #121218; padding: 10px 15px; font-weight: 600;
-            border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;
-        }
-
+        .editor-panel { background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header { background-color: #121218; padding: 12px 15px; font-weight: 600; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .panel-header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        
         .code-area {
-            flex-grow: 1; width: 100%; background-color: #050505; color: #A6ACCD;
-            border: none; padding: 15px; font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 14px; resize: none; outline: none; line-height: 1.5; box-sizing: border-box;
+            flex: 1; width: 100%; background-color: #050505; color: #A6ACCD; border: none; padding: 15px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; resize: none; outline: none;
+            line-height: 1.6; box-sizing: border-box; overflow-y: auto; white-space: pre;
         }
 
-        /* 选项控制台 */
         .options-panel { overflow-y: auto; padding: 15px; }
         .option-group { margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; border: 1px solid var(--border-color); }
         .option-group h3 { margin: 0 0 15px 0; font-size: 1rem; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
         
         .checkbox-label { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; cursor: pointer; }
-        .checkbox-label input[type="checkbox"] { margin-top: 4px; accent-color: var(--accent-color); }
+        .checkbox-label input[type="checkbox"] { margin-top: 4px; accent-color: var(--accent-color); flex-shrink: 0; }
         .checkbox-text { display: flex; flex-direction: column; }
-        .checkbox-title { font-weight: 600; font-size: 0.95rem; }
-        .checkbox-desc { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+        .checkbox-title { font-weight: 600; font-size: 0.9rem; }
+        .checkbox-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; }
 
         .color-picker-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .color-picker-row input[type="color"] { 
-            -webkit-appearance: none; border: none; width: 30px; height: 30px; 
-            border-radius: 4px; cursor: pointer; background: none; 
-        }
+        .color-picker-row input[type="color"] { -webkit-appearance: none; border: none; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; background: none; }
         .color-picker-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         .color-picker-row input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border-color); border-radius: 4px; }
 
+        /* ================= 移动端终极适配 ================= */
+        @media (max-width: 1024px) {
+            .workspace-split { grid-template-columns: 1fr; height: auto; display: flex; flex-direction: column; }
+            .editor-panel { min-height: 400px; }
+            .options-panel { min-height: auto; }
+        }
+        
+        @media (max-width: 768px) {
+            header { padding: 0.8rem 1rem; }
+            .logo-area { font-size: 1.1rem; }
+            .tool-header h2 { font-size: 1.2rem; }
+            .view-container { padding: 1rem; }
+            .editor-panel { min-height: 350px; } /* 确保手机端代码框足够大 */
+            .btn { padding: 6px 12px; font-size: 0.85rem; }
+            .panel-header { flex-direction: column; align-items: flex-start; }
+            .panel-header-actions { width: 100%; justify-content: flex-end; }
+        }
     </style>
 </head>
 <body>
@@ -156,17 +124,21 @@
             <span>MUGEN/IKEMEN GO</span>
             <span class="logo-accent">PRO TOOLKIT</span>
         </div>
-        <div style="font-size: 0.9rem; color: var(--text-muted);">v1.0.0 核心构架版</div>
+        <div class="header-info">
+            <span>v1.0.1 核心强化版</span>
+            <span id="busuanzi_container_site_pv" style="display:none;">
+                总使用人次: <span id="busuanzi_value_site_pv" style="color: var(--accent-color); font-weight: bold;"></span>
+            </span>
+        </div>
     </header>
 
     <div id="view-dashboard" class="view-container view-active">
         <div class="tool-grid">
-            <div class="tool-card" onclick="switchView('view-cmd2dat')">
+            <div class="tool-card" onclick="navigateTo('cmd2dat')">
                 <div class="tool-icon">📜</div>
                 <div class="tool-name">高级出招表生成器</div>
-                <div class="tool-desc">业界领先的 .cmd 解析引擎。支持 AI 指令过滤、注释提取及 Ikemen GO 专属 .dat 格式编译。</div>
+                <div class="tool-desc">全编码支持的 .cmd 解析引擎。支持 AI 指令过滤、注释提取及 Ikemen GO 专属 .dat 格式编译。</div>
             </div>
-
             <div class="tool-card disabled">
                 <div class="tool-icon">❓</div>
                 <div class="tool-name">正在开发中</div>
@@ -174,9 +146,10 @@
             </div>
         </div>
     </div>
+
     <div id="view-cmd2dat" class="view-container">
         <div class="tool-header">
-            <button class="btn-back" onclick="switchView('view-dashboard')">← 返回主菜单</button>
+            <button class="btn-back" onclick="navigateTo('dashboard')">← 返回主菜单</button>
             <h2>高级出招表生成器 (CMD to DAT)</h2>
         </div>
 
@@ -184,10 +157,17 @@
             <div class="editor-panel">
                 <div class="panel-header">
                     <span>📝 源文件 (.cmd)</span>
-                    <button class="btn" onclick="document.getElementById('file-upload').click()">📂 上传文件</button>
-                    <input type="file" id="file-upload" accept=".cmd" style="display: none;" onchange="handleFileUpload(event)">
+                    <div class="panel-header-actions">
+                        <select id="file-encoding" class="form-select" title="如果上传后中文乱码，请尝试更改编码">
+                            <option value="utf-8">UTF-8 (默认/国际)</option>
+                            <option value="gbk">GBK (中文旧版)</option>
+                            <option value="shift-jis">Shift-JIS (日文旧版)</option>
+                        </select>
+                        <button class="btn" onclick="document.getElementById('file-upload').click()">📂 上传文件</button>
+                        <input type="file" id="file-upload" accept=".cmd" style="display: none;" onchange="handleFileUpload(event)">
+                    </div>
                 </div>
-                <textarea id="cmd-input" class="code-area" placeholder="在此粘贴 .cmd 文件内容，或点击上方按钮上传文件..."></textarea>
+                <textarea id="cmd-input" class="code-area" placeholder="在此粘贴 .cmd 文件内容，或使用上方按钮上传文件...&#10;&#10;如果发现文件上传后出现乱码，请更改右上角的【编码格式】重新上传。"></textarea>
             </div>
 
             <div class="editor-panel options-panel">
@@ -197,35 +177,28 @@
                         <input type="checkbox" id="opt-remove-ai" checked>
                         <div class="checkbox-text">
                             <span class="checkbox-title">过滤 AI 控制逻辑</span>
-                            <span class="checkbox-desc">自动剔除包含 "AI" 标记的 State controller，防止招式重复。</span>
+                            <span class="checkbox-desc">自动删除包含 "AI" 标记的控制器，防止招式重复。</span>
                         </div>
                     </label>
                     <label class="checkbox-label">
                         <input type="checkbox" id="opt-compress" checked>
                         <div class="checkbox-text">
                             <span class="checkbox-title">压缩方向指令</span>
-                            <span class="checkbox-desc">将冗长的指令转化为直观符号 (例: D, DF, F 优化为半圈标识)。</span>
+                            <span class="checkbox-desc">优化冗长的方向指令 (例: D, DF, F 优化为半圈标识)。</span>
                         </div>
                     </label>
                     <label class="checkbox-label">
                         <input type="checkbox" id="opt-remove-single">
                         <div class="checkbox-text">
                             <span class="checkbox-title">剔除基础单键攻击</span>
-                            <span class="checkbox-desc">仅保留必杀技与超必杀技，过滤 a, b, c 等普通攻击。</span>
+                            <span class="checkbox-desc">仅保留必杀技与超必杀技，过滤普通攻击。</span>
                         </div>
                     </label>
                     <label class="checkbox-label">
                         <input type="checkbox" id="opt-use-comments" checked>
                         <div class="checkbox-text">
                             <span class="checkbox-title">深度解析注释为招式名</span>
-                            <span class="checkbox-desc">优先读取 [State -1] 上方的分号注释 (;) 作为招式名称。</span>
-                        </div>
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="opt-auto-fix">
-                        <div class="checkbox-text">
-                            <span class="checkbox-title">智能语法纠错 (独家)</span>
-                            <span class="checkbox-desc">自动修复不规范的触发器格式与遗漏的括号。</span>
+                            <span class="checkbox-desc">优先读取 [State -1] 上方的分号注释 (;) 作为招式名。</span>
                         </div>
                     </label>
                 </div>
@@ -233,20 +206,20 @@
                 <div class="option-group">
                     <h3>UI 颜色定制 (Ikemen GO)</h3>
                     <div class="color-picker-row">
-                        <span style="font-size: 0.9rem;">分类标题颜色 (Header)</span>
+                        <span style="font-size: 0.85rem; font-weight:600;">分类标题颜色 (Header)</span>
                         <input type="color" id="color-header" value="#FFFF00">
                     </div>
                     <div class="color-picker-row">
-                        <span style="font-size: 0.9rem;">能量消耗标注颜色</span>
+                        <span style="font-size: 0.85rem; font-weight:600;">能量消耗标注颜色</span>
                         <input type="color" id="color-power" value="#CCCCCC">
                     </div>
                     <div class="color-picker-row">
-                        <span style="font-size: 0.9rem;">特殊状态要求颜色</span>
+                        <span style="font-size: 0.85rem; font-weight:600;">特殊状态要求颜色</span>
                         <input type="color" id="color-special" value="#8888FF">
                     </div>
                 </div>
 
-                <button class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;" onclick="processCmdToDat()">
+                <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; margin-top: auto;" onclick="processCmdToDat()">
                     ⚡ 开始专业编译
                 </button>
             </div>
@@ -254,42 +227,73 @@
             <div class="editor-panel">
                 <div class="panel-header">
                     <span>✨ 编译结果 (.dat)</span>
-                    <div style="display: flex; gap: 10px;">
+                    <div class="panel-header-actions">
                         <button class="btn" onclick="copyToClipboard()">📋 复制</button>
                         <button class="btn btn-primary" onclick="downloadDat()">💾 下载 .dat</button>
                     </div>
                 </div>
-                <textarea id="dat-output" class="code-area" placeholder="编译后的 Ikemen GO 标准出招表将显示在这里..." readonly></textarea>
+                <textarea id="dat-output" class="code-area" placeholder="编译后的 Ikemen GO 标准 UTF-8 出招表将显示在这里..." readonly></textarea>
             </div>
         </div>
     </div>
+
     <script>
-        // --- 视图路由系统 ---
-        function switchView(viewId) {
+        // --- 路由与状态系统 (解决刷新重置问题) ---
+        function navigateTo(route) {
+            window.location.hash = route;
+        }
+
+        function handleRoute() {
+            let hash = window.location.hash.replace('#', '');
+            if (!hash) hash = 'dashboard';
+            
             document.querySelectorAll('.view-container').forEach(el => {
                 el.classList.remove('view-active');
             });
-            document.getElementById(viewId).classList.add('view-active');
+            
+            const targetView = document.getElementById(`view-${hash}`);
+            if (targetView) {
+                targetView.classList.add('view-active');
+            } else {
+                document.getElementById('view-dashboard').classList.add('view-active');
+            }
         }
 
-        // --- 文件上传逻辑 ---
+        // 监听 Hash 变化与初次加载
+        window.addEventListener('hashchange', handleRoute);
+        window.addEventListener('DOMContentLoaded', handleRoute);
+
+        // --- 高级文件上传逻辑 (支持多语言编码) ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
+            // 获取用户选择的编码格式 (utf-8, gbk, shift-jis)
+            const encoding = document.getElementById('file-encoding').value;
             const reader = new FileReader();
+
+            // 使用 ArrayBuffer 读取，彻底解决纯 Text 读取导致的乱码死结
             reader.onload = function(e) {
-                document.getElementById('cmd-input').value = e.target.result;
+                try {
+                    const buffer = e.target.result;
+                    const decoder = new TextDecoder(encoding);
+                    const text = decoder.decode(buffer);
+                    document.getElementById('cmd-input').value = text;
+                } catch (err) {
+                    alert('文件读取失败或编码不支持，请重试！');
+                }
+                // 清空 input 保证下次传同名文件也能触发
+                event.target.value = '';
             };
-            reader.readAsText(file);
+            reader.readAsArrayBuffer(file);
         }
 
-        // --- 下载与复制逻辑 ---
+        // --- 下载与复制逻辑 (强制 UTF-8 导出) ---
         function copyToClipboard() {
             const output = document.getElementById('dat-output');
             output.select();
             document.execCommand('copy');
-            alert('已成功复制到剪贴板！');
+            alert('已成功复制到剪贴板！可以直接粘贴进文件。');
         }
 
         function downloadDat() {
@@ -298,7 +302,8 @@
                 alert('没有可下载的内容，请先执行编译！');
                 return;
             }
-            const blob = new Blob([content], { type: 'text/plain' });
+            // 强制使用 UTF-8 编码导出 Blob
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -307,12 +312,11 @@
             window.URL.revokeObjectURL(url);
         }
 
-        // --- 将 HEX 颜色转换为 Ikemen GO 格式的辅助函数 ---
         function getIkemenColorStr(hexColor) {
             return `\\c[0x${hexColor.substring(1).toUpperCase()}]`;
         }
 
-        // --- 核心转换引擎 (结构骨架，需后续深度完善正则逻辑) ---
+        // --- 核心转换引擎 (结构骨架) ---
         function processCmdToDat() {
             const rawCmd = document.getElementById('cmd-input').value;
             if (!rawCmd.trim()) {
@@ -325,9 +329,9 @@
 
             let resultDat = "";
             resultDat += `; ==========================================\n`;
+            resultDat += `; IKEMEN GO 专属出招表 (UTF-8)\n`;
             resultDat += `; 生成由 MUGEN/IKEMEN GO PRO TOOLKIT 驱动\n`;
             resultDat += `; ==========================================\n\n`;
-
             resultDat += `${colorHeader}<#> Special Moves\n\n`;
             
             const lines = rawCmd.split('\n');
@@ -341,7 +345,7 @@
                     let moveName = "Unknown Move";
                     let commandStr = "";
 
-                    for (let j = 1; j <= 3 && (i + j) < lines.length; j++) {
+                    for (let j = 1; j <= 4 && (i + j) < lines.length; j++) {
                         let subLine = lines[i + j].trim();
                         if (subLine.toLowerCase().startsWith('name')) {
                             moveName = subLine.split('=')[1].replace(/"/g, '').trim();
@@ -364,10 +368,9 @@
             }
 
             if (moveCount === 0) {
-                resultDat += `; 未能在源文件中解析到标准的 [Command] 数据。\n`;
-                resultDat += `; 请检查您的 .cmd 格式是否规范。\n`;
+                resultDat += `; 未能找到标准的 [Command] 格式数据。\n`;
             } else {
-                resultDat += `\n; 成功解析了 ${moveCount} 个招式指令。\n`;
+                resultDat += `\n; 成功编译 ${moveCount} 个指令。\n`;
             }
 
             document.getElementById('dat-output').value = resultDat;
