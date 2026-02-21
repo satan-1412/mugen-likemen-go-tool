@@ -263,30 +263,81 @@
         window.addEventListener('hashchange', handleRoute);
         window.addEventListener('DOMContentLoaded', handleRoute);
 
-        // --- 高级文件上传逻辑 (支持多语言编码) ---
+                // --- 全局变量缓存文件数据 (用于支持无缝切换编码) ---
+        let currentFileBuffer = null;
+
+        // --- 轻量级编码自动检测引擎 ---
+        function detectEncoding(buffer) {
+            try {
+                // 1. 严格测试是否为原生 UTF-8
+                const decoder = new TextDecoder('utf-8', { fatal: true });
+                decoder.decode(buffer);
+                return 'utf-8'; 
+            } catch (e) {
+                // 2. 启发式扫描：如果不是 UTF-8，统计 GBK 与 Shift-JIS 的特征字节命中率
+                const view = new Uint8Array(buffer);
+                let gbkScore = 0, sjisScore = 0;
+                
+                for (let i = 0; i < view.length; i++) {
+                    const b1 = view[i];
+                    if (b1 > 0x7F) { // 遇到非 ASCII 字符
+                        const b2 = view[i + 1];
+                        if (!b2) break;
+                        // Shift-JIS 范围匹配
+                        if (((b1 >= 0x81 && b1 <= 0x9F) || (b1 >= 0xE0 && b1 <= 0xFC)) && 
+                            ((b2 >= 0x40 && b2 <= 0x7E) || (b2 >= 0x80 && b2 <= 0xFC))) sjisScore++;
+                        // GBK 范围匹配
+                        if (b1 >= 0x81 && b1 <= 0xFE && b2 >= 0x40 && b2 <= 0xFE && b2 !== 0x7F) gbkScore++;
+                        i++; // 跳过双字节的第二位
+                    }
+                }
+                // 返回得分更高的编码类型
+                return gbkScore >= sjisScore ? 'gbk' : 'shift-jis';
+            }
+        }
+
+        // --- 高级文件上传逻辑 (接入自动检测) ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            // 获取用户选择的编码格式 (utf-8, gbk, shift-jis)
-            const encoding = document.getElementById('file-encoding').value;
             const reader = new FileReader();
-
-            // 使用 ArrayBuffer 读取，彻底解决纯 Text 读取导致的乱码死结
             reader.onload = function(e) {
-                try {
-                    const buffer = e.target.result;
-                    const decoder = new TextDecoder(encoding);
-                    const text = decoder.decode(buffer);
-                    document.getElementById('cmd-input').value = text;
-                } catch (err) {
-                    alert('文件读取失败或编码不支持，请重试！');
-                }
-                // 清空 input 保证下次传同名文件也能触发
-                event.target.value = '';
+                currentFileBuffer = e.target.result; // 将文件存入内存
+                
+                // 1. 自动检测编码并更新下拉菜单 UI
+                const detected = detectEncoding(currentFileBuffer);
+                const encodingSelect = document.getElementById('file-encoding');
+                if (encodingSelect) encodingSelect.value = detected;
+                
+                // 2. 执行解码渲染
+                applyEncodingAndDisplay();
+                
+                // 3. 允许用户连续重复上传同一个文件
+                event.target.value = ''; 
             };
             reader.readAsArrayBuffer(file);
         }
+
+        // --- 核心解码逻辑（支持下拉菜单实时触发） ---
+        function applyEncodingAndDisplay() {
+            if (!currentFileBuffer) return;
+            const encoding = document.getElementById('file-encoding').value;
+            try {
+                const decoder = new TextDecoder(encoding);
+                document.getElementById('cmd-input').value = decoder.decode(currentFileBuffer);
+            } catch (err) {
+                alert('文件解析失败，请尝试手动切换其他编码！');
+            }
+        }
+
+        // 监听下拉菜单变化，实现“即选即转”的无缝乱码修复
+        window.addEventListener('DOMContentLoaded', () => {
+            const encodingSelect = document.getElementById('file-encoding');
+            if(encodingSelect) {
+                encodingSelect.addEventListener('change', applyEncodingAndDisplay);
+            }
+        });
 
         // --- 下载与复制逻辑 (强制 UTF-8 导出) ---
         function copyToClipboard() {
