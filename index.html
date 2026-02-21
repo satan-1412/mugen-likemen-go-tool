@@ -206,7 +206,7 @@
                 <div class="option-group">
                     <h3>UI 颜色定制 (Ikemen GO)</h3>
                     <div class="color-picker-row">
-                        <span style="font-size: 0.85rem; font-weight:600;">分类标题颜色 (Header)</span>
+                        <span style="font-size: 0.85rem; font-weight:600;">技能名称颜色 (Skill Name)</span>
                         <input type="color" id="color-header" value="#FFFF00">
                     </div>
                     <div class="color-picker-row">
@@ -237,8 +237,8 @@
         </div>
     </div>
 
-    <script>
-        // --- 路由与状态系统 (解决刷新重置问题) ---
+        <script>
+        // --- 1. 路由与状态系统 (解决刷新重置问题) ---
         function navigateTo(route) {
             window.location.hash = route;
         }
@@ -259,67 +259,53 @@
             }
         }
 
-        // 监听 Hash 变化与初次加载
         window.addEventListener('hashchange', handleRoute);
         window.addEventListener('DOMContentLoaded', handleRoute);
 
-                // --- 全局变量缓存文件数据 (用于支持无缝切换编码) ---
-        let currentFileBuffer = null;
+        // --- 2. 编码自动检测引擎 (解决乱码痛点) ---
+        let currentFileBuffer = null; // 内存缓存
 
-        // --- 轻量级编码自动检测引擎 ---
         function detectEncoding(buffer) {
             try {
-                // 1. 严格测试是否为原生 UTF-8
                 const decoder = new TextDecoder('utf-8', { fatal: true });
                 decoder.decode(buffer);
                 return 'utf-8'; 
             } catch (e) {
-                // 2. 启发式扫描：如果不是 UTF-8，统计 GBK 与 Shift-JIS 的特征字节命中率
                 const view = new Uint8Array(buffer);
                 let gbkScore = 0, sjisScore = 0;
-                
                 for (let i = 0; i < view.length; i++) {
                     const b1 = view[i];
-                    if (b1 > 0x7F) { // 遇到非 ASCII 字符
+                    if (b1 > 0x7F) { 
                         const b2 = view[i + 1];
                         if (!b2) break;
-                        // Shift-JIS 范围匹配
                         if (((b1 >= 0x81 && b1 <= 0x9F) || (b1 >= 0xE0 && b1 <= 0xFC)) && 
                             ((b2 >= 0x40 && b2 <= 0x7E) || (b2 >= 0x80 && b2 <= 0xFC))) sjisScore++;
-                        // GBK 范围匹配
                         if (b1 >= 0x81 && b1 <= 0xFE && b2 >= 0x40 && b2 <= 0xFE && b2 !== 0x7F) gbkScore++;
-                        i++; // 跳过双字节的第二位
+                        i++; 
                     }
                 }
-                // 返回得分更高的编码类型
                 return gbkScore >= sjisScore ? 'gbk' : 'shift-jis';
             }
         }
 
-        // --- 高级文件上传逻辑 (接入自动检测) ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                currentFileBuffer = e.target.result; // 将文件存入内存
+                currentFileBuffer = e.target.result; 
                 
-                // 1. 自动检测编码并更新下拉菜单 UI
                 const detected = detectEncoding(currentFileBuffer);
                 const encodingSelect = document.getElementById('file-encoding');
                 if (encodingSelect) encodingSelect.value = detected;
                 
-                // 2. 执行解码渲染
                 applyEncodingAndDisplay();
-                
-                // 3. 允许用户连续重复上传同一个文件
-                event.target.value = ''; 
+                event.target.value = ''; // 允许重复上传
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // --- 核心解码逻辑（支持下拉菜单实时触发） ---
         function applyEncodingAndDisplay() {
             if (!currentFileBuffer) return;
             const encoding = document.getElementById('file-encoding').value;
@@ -331,15 +317,12 @@
             }
         }
 
-        // 监听下拉菜单变化，实现“即选即转”的无缝乱码修复
         window.addEventListener('DOMContentLoaded', () => {
             const encodingSelect = document.getElementById('file-encoding');
-            if(encodingSelect) {
-                encodingSelect.addEventListener('change', applyEncodingAndDisplay);
-            }
+            if(encodingSelect) encodingSelect.addEventListener('change', applyEncodingAndDisplay);
         });
 
-        // --- 下载与复制逻辑 (强制 UTF-8 导出) ---
+        // --- 3. 下载与剪贴板逻辑 (强制 UTF-8 导出) ---
         function copyToClipboard() {
             const output = document.getElementById('dat-output');
             output.select();
@@ -353,7 +336,6 @@
                 alert('没有可下载的内容，请先执行编译！');
                 return;
             }
-            // 强制使用 UTF-8 编码导出 Blob
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -363,11 +345,36 @@
             window.URL.revokeObjectURL(url);
         }
 
+        // --- 4. 出招表核心格式化引擎 (重头戏：可视化与染色) ---
         function getIkemenColorStr(hexColor) {
             return `\\c[0x${hexColor.substring(1).toUpperCase()}]`;
         }
 
-        // --- 核心转换引擎 (结构骨架) ---
+        function formatCommand(cmdStr) {
+            // 清理影响阅读的技术符号
+            let formatted = cmdStr.replace(/[~$/]/g, '');
+
+            // 映射方向为 Unicode 箭头 (注意：双键必须在单键前面替换)
+            const dirMap = [
+                { reg: /\bUB\b/gi, val: '↖' }, { reg: /\bUF\b/gi, val: '↗' },
+                { reg: /\bDB\b/gi, val: '↙' }, { reg: /\bDF\b/gi, val: '↘' },
+                { reg: /\bU\b/gi, val: '↑' },  { reg: /\bD\b/gi, val: '↓' },
+                { reg: /\bB\b/gi, val: '←' },  { reg: /\bF\b/gi, val: '→' }
+            ];
+
+            dirMap.forEach(map => {
+                formatted = formatted.replace(map.reg, map.val);
+            });
+
+            // 紧凑化排版：消除逗号和多余空格，并在按键前加一个空格区分
+            formatted = formatted.replace(/\s+/g, ''); // 移除所有原有的空格
+            formatted = formatted.replace(/,/g, '');   // 移除逗号
+            // 将纯字母/加号(如 x, a+b) 的部分前面加个空格，与箭头隔开
+            formatted = formatted.replace(/([a-zA-Z0-9\+]+)$/, ' $1'); 
+            
+            return formatted.trim();
+        }
+
         function processCmdToDat() {
             const rawCmd = document.getElementById('cmd-input').value;
             if (!rawCmd.trim()) {
@@ -376,14 +383,16 @@
             }
 
             const removeAI = document.getElementById('opt-remove-ai').checked;
-            const colorHeader = getIkemenColorStr(document.getElementById('color-header').value);
+            // 提取选择的颜色
+            const nameColor = getIkemenColorStr(document.getElementById('color-header').value);
 
             let resultDat = "";
             resultDat += `; ==========================================\n`;
-            resultDat += `; IKEMEN GO 专属出招表 (UTF-8)\n`;
+            resultDat += `; IKEMEN GO 专属可视化出招表 (UTF-8)\n`;
             resultDat += `; 生成由 MUGEN/IKEMEN GO PRO TOOLKIT 驱动\n`;
             resultDat += `; ==========================================\n\n`;
-            resultDat += `${colorHeader}<#> Special Moves\n\n`;
+            
+            resultDat += `<#> Special Moves\n\n`;
             
             const lines = rawCmd.split('\n');
             let i = 0;
@@ -392,26 +401,31 @@
             while (i < lines.length) {
                 let line = lines[i].trim();
                 
-                if (line.toLowerCase().startsWith('[command]')) {
-                    let moveName = "Unknown Move";
+                // 识别指令块
+                if (/^\[command\]/i.test(line)) {
+                    let moveName = "";
                     let commandStr = "";
 
-                    for (let j = 1; j <= 4 && (i + j) < lines.length; j++) {
+                    // 向下扫描提取名和键位
+                    for (let j = 1; j <= 5 && (i + j) < lines.length; j++) {
                         let subLine = lines[i + j].trim();
-                        if (subLine.toLowerCase().startsWith('name')) {
-                            moveName = subLine.split('=')[1].replace(/"/g, '').trim();
-                        }
-                        if (subLine.toLowerCase().startsWith('command')) {
-                            commandStr = subLine.split('=')[1].trim();
-                        }
+                        let nameMatch = subLine.match(/^name\s*=\s*"(.*)"/i);
+                        if (nameMatch) moveName = nameMatch[1].trim();
+
+                        let cmdMatch = subLine.match(/^command\s*=\s*(.*)/i);
+                        if (cmdMatch) commandStr = cmdMatch[1].trim();
                     }
 
-                    if (removeAI && moveName.toLowerCase().includes('ai')) {
-                        i++; continue; 
-                    }
+                    if (moveName && commandStr) {
+                        if (removeAI && /ai/i.test(moveName)) {
+                            i++; continue; 
+                        }
 
-                    if (commandStr) {
-                        resultDat += `${moveName} -> ${commandStr}\n`;
+                        // 执行可视化格式化
+                        const visualCmd = formatCommand(commandStr);
+
+                        // 注入颜色代码 + 招式名 -> 视觉化按键
+                        resultDat += `${nameColor}${moveName} -> ${visualCmd}\n`;
                         moveCount++;
                     }
                 }
@@ -421,7 +435,7 @@
             if (moveCount === 0) {
                 resultDat += `; 未能找到标准的 [Command] 格式数据。\n`;
             } else {
-                resultDat += `\n; 成功编译 ${moveCount} 个指令。\n`;
+                resultDat += `\n\\c[0xFFFFFF]; 成功编译 ${moveCount} 个可视化指令。\n`;
             }
 
             document.getElementById('dat-output').value = resultDat;
