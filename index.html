@@ -190,22 +190,48 @@
                 </div>
 
                 <div class="option-group">
-                    <h3>输出显示模式</h3>
-                    <label class="checkbox-label" style="align-items: center;">
+                    <h3>多语言与显示设置</h3>
+                    <label class="checkbox-label" style="align-items: center; margin-bottom: 10px;">
                         <input type="radio" name="display-mode" value="icon" checked style="margin-top:0;">
-                        <span class="checkbox-title" style="margin-left: 5px;">🎮 原生图标模式 (默认 / 支持颜色与宏解析)</span>
+                        <span class="checkbox-title" style="margin-left: 5px;">🎮 原生图标模式 (默认 / 支持颜色宏)</span>
                     </label>
-                    <label class="checkbox-label" style="align-items: center; margin-top: 10px;">
+                    <label class="checkbox-label" style="align-items: center; margin-bottom: 15px;">
                         <input type="radio" name="display-mode" value="text" style="margin-top:0;">
-                        <span class="checkbox-title" style="margin-left: 5px;">📝 纯文本模式 (经典箭头 / 无颜色代码)</span>
+                        <span class="checkbox-title" style="margin-left: 5px;">📝 纯文本模式 (无颜色 / 经典箭头)</span>
                     </label>
+                    
+                    <div style="border-top: 1px dashed var(--border-color); padding-top: 10px;">
+                        <span style="font-size: 0.85rem; font-weight:600; color: var(--text-muted);">词典翻译引擎 (主要针对分类与通用词)-机翻慎用</span>
+                        <select id="opt-translate" class="form-select" style="width: 100%; margin-top: 8px;">
+                            <option value="default">默认 (不翻译，保持源文件语言)</option>
+                            <option value="zh">中文 (Chinese)</option>
+                            <option value="ja">日文 (Japanese)</option>
+                            <option value="en">英文 (English)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="option-group">
                     <h3>UI 颜色定制 (仅图标模式生效)</h3>
+                    
                     <div class="color-picker-row">
-                        <span style="font-size: 0.85rem; font-weight:600;">分类标题颜色 (Header)</span>
+                        <div class="checkbox-text">
+                            <span style="font-size: 0.85rem; font-weight:600;">分类标题颜色 (Category)</span>
+                            <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+                                <input type="checkbox" id="enable-color-header" checked> 启用自定义
+                            </label>
+                        </div>
                         <input type="color" id="color-header" value="#F0F000">
+                    </div>
+
+                    <div class="color-picker-row" style="margin-top: 15px;">
+                        <div class="checkbox-text">
+                            <span style="font-size: 0.85rem; font-weight:600;">招式名称颜色 (Move Name)</span>
+                            <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+                                <input type="checkbox" id="enable-color-move"> 启用自定义
+                            </label>
+                        </div>
+                        <input type="color" id="color-move" value="#00E5FF">
                     </div>
                 </div>
 
@@ -227,204 +253,233 @@
         </div>
     </div>
     <script>
-        // --- 1. 路由与状态系统 ---
+                            /* ======================== [1] 系统底层框架 (勿动) ======================== */
         function navigateTo(route) { window.location.hash = route; }
         function handleRoute() {
-            let hash = window.location.hash.replace('#', '');
-            if (!hash) hash = 'dashboard';
+            let hash = window.location.hash.replace('#', '') || 'dashboard';
             document.querySelectorAll('.view-container').forEach(el => el.classList.remove('view-active'));
-            const targetView = document.getElementById(`view-${hash}`);
-            if (targetView) targetView.classList.add('view-active');
-            else document.getElementById('view-dashboard').classList.add('view-active');
+            const target = document.getElementById(`view-${hash}`);
+            if (target) target.classList.add('view-active');
         }
         window.addEventListener('hashchange', handleRoute);
         window.addEventListener('DOMContentLoaded', handleRoute);
 
-        // --- 2. 编码自动检测引擎 ---
         let currentFileBuffer = null;
-        function detectEncoding(buffer) {
-            try {
-                new TextDecoder('utf-8', { fatal: true }).decode(buffer);
-                return 'utf-8'; 
-            } catch (e) {
-                const view = new Uint8Array(buffer);
-                let gbkScore = 0, sjisScore = 0;
-                for (let i = 0; i < view.length; i++) {
-                    const b1 = view[i];
-                    if (b1 > 0x7F) { 
-                        const b2 = view[i + 1];
-                        if (!b2) break;
-                        if (((b1 >= 0x81 && b1 <= 0x9F) || (b1 >= 0xE0 && b1 <= 0xFC)) && ((b2 >= 0x40 && b2 <= 0x7E) || (b2 >= 0x80 && b2 <= 0xFC))) sjisScore++;
-                        if (b1 >= 0x81 && b1 <= 0xFE && b2 >= 0x40 && b2 <= 0xFE && b2 !== 0x7F) gbkScore++;
-                        i++; 
-                    }
-                }
-                return gbkScore >= sjisScore ? 'gbk' : 'shift-jis';
-            }
-        }
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                currentFileBuffer = e.target.result; 
-                const detected = detectEncoding(currentFileBuffer);
-                const encodingSelect = document.getElementById('file-encoding');
-                if (encodingSelect) encodingSelect.value = detected;
+                currentFileBuffer = e.target.result;
+                const encoding = detectEncoding(currentFileBuffer);
+                document.getElementById('file-encoding').value = encoding;
                 applyEncodingAndDisplay();
                 event.target.value = ''; 
             };
             reader.readAsArrayBuffer(file);
         }
+        function detectEncoding(buf) {
+            try { new TextDecoder('utf-8', {fatal:true}).decode(buf); return 'utf-8'; }
+            catch(e) { return 'gbk'; } 
+        }
         function applyEncodingAndDisplay() {
             if (!currentFileBuffer) return;
-            try {
-                document.getElementById('cmd-input').value = new TextDecoder(document.getElementById('file-encoding').value).decode(currentFileBuffer);
-            } catch (err) { alert('文件解析失败，请尝试手动切换编码！'); }
+            const enc = document.getElementById('file-encoding').value;
+            try { document.getElementById('cmd-input').value = new TextDecoder(enc).decode(currentFileBuffer); }
+            catch(e) { alert('解码失败，请手动选择编码！'); }
         }
-        window.addEventListener('DOMContentLoaded', () => {
-            const encodingSelect = document.getElementById('file-encoding');
-            if(encodingSelect) encodingSelect.addEventListener('change', applyEncodingAndDisplay);
-        });
+        document.getElementById('file-encoding')?.addEventListener('change', applyEncodingAndDisplay);
 
-        // --- 3. 下载与剪贴板逻辑 ---
+        // 【优化】无弹窗丝滑复制体验
         function copyToClipboard() {
-            const output = document.getElementById('dat-output');
-            output.select();
-            document.execCommand('copy');
-            alert('已成功复制到剪贴板！可以直接粘贴进 .dat 文件。');
+            const el = document.getElementById('dat-output');
+            el.select(); document.execCommand('copy');
+            // 获取复制按钮并展示动画
+            const btns = document.querySelectorAll('.btn');
+            let targetBtn = null;
+            btns.forEach(b => { if(b.innerText.includes('复制')) targetBtn = b; });
+            if(targetBtn) {
+                const oldHTML = targetBtn.innerHTML;
+                targetBtn.innerHTML = '✅ 已复制';
+                targetBtn.style.color = '#10B981';
+                setTimeout(() => {
+                    targetBtn.innerHTML = oldHTML;
+                    targetBtn.style.color = '';
+                }, 2000);
+            }
         }
+
         function downloadDat() {
             const content = document.getElementById('dat-output').value;
-            if (!content) return alert('没有可下载的内容，请先执行编译！');
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'movelist.dat'; a.click();
-            window.URL.revokeObjectURL(url);
+            if (!content) return alert('内容为空！');
+            const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'movelist.dat'; a.click();
         }
 
-        // --- 4. 出招表核心格式化引擎 (支持双模输出与动态分类) ---
-        function getIkemenColorTag(hexColor) { return `<#${hexColor.substring(1).toLowerCase()}>`; }
+        /* ======================== [2] 工具逻辑区 ======================== */
 
-        // 模式 A：纯文本箭头
-        function formatCommandText(cmdStr) {
-            let formatted = cmdStr.replace(/[~$/]/g, '');
+        // 1. 纯前端在线机器翻译引擎 (Google GTX API)
+        async function fetchTranslation(text, targetLang) {
+            if (!text || targetLang === 'default') return text;
+            const langMap = { 'zh': 'zh-CN', 'ja': 'ja', 'en': 'en' };
+            const tl = langMap[targetLang] || 'zh-CN';
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                return data[0][0][0]; 
+            } catch (error) { return text; }
+        }
+
+        // 2. 纯文本模式格式化 (要求：无空格紧凑，+号前后加空格)
+        function formatCmdText(cmd) {
+            let s = cmd.replace(/[~$/]/g, ''); 
             const dirMap = [
                 { reg: /\bUB\b/gi, val: '↖' }, { reg: /\bUF\b/gi, val: '↗' },
                 { reg: /\bDB\b/gi, val: '↙' }, { reg: /\bDF\b/gi, val: '↘' },
                 { reg: /\bU\b/gi, val: '↑' },  { reg: /\bD\b/gi, val: '↓' },
                 { reg: /\bB\b/gi, val: '←' },  { reg: /\bF\b/gi, val: '→' }
             ];
-            dirMap.forEach(map => formatted = formatted.replace(map.reg, map.val));
-            return formatted.replace(/\s+/g, '').replace(/,/g, '').replace(/([a-zA-Z0-9\+]+)$/, ' $1').trim();
+            dirMap.forEach(m => s = s.replace(m.reg, m.val));
+            
+            // 去除所有逗号和空格，使其紧凑 (例如: ↓↘→)
+            s = s.replace(/[\s,]+/g, '');
+            // 仅在 + 号前后加空格
+            s = s.replace(/\+/g, ' + ');
+            // 在方向箭头和按键字母之间加一个空格区分
+            s = s.replace(/([↖↗↙↘↑↓←→])([a-zA-Z0-9])/g, '$1 $2');
+            
+            return s.trim(); 
         }
 
-        // 模式 B：原生图标宏 (严格匹配 Ikemen GO movelist.dat)
-        function formatCommandIcon(cmdStr) {
-            let s = cmdStr.toUpperCase().replace(/\s+/g, '');
-            // 复合指令映射
-            s = s.replace(/~?D,DF,F,D,DF,F/g, '_QDF_QDF'); 
-            s = s.replace(/~?D,DB,B,D,DB,B/g, '_QDB_QDB');
-            s = s.replace(/~?D,DF,F/g, '_QDF');
-            s = s.replace(/~?D,DB,B/g, '_QDB');
-            s = s.replace(/~?F,D,DF/g, '_DSF');
-            s = s.replace(/~?B,D,DB/g, '_DSB');
-            s = s.replace(/~?B,DB,D,DF,F/g, '_HDF');
-            s = s.replace(/~?F,DF,D,DB,B/g, '_HDB');
+        // 3. 原生图标模式格式化 (要求：绝对无下划线，方向用箭头，按键用游戏图标)
+        function formatCmdIcon(cmd) {
+            let s = cmd.replace(/[~$/]/g, '');
+            // 方向继续使用美观的 Unicode 箭头，保证100%兼容且无下划线
+            const dirMap = [
+                { reg: /\bUB\b/gi, val: '↖' }, { reg: /\bUF\b/gi, val: '↗' },
+                { reg: /\bDB\b/gi, val: '↙' }, { reg: /\bDF\b/gi, val: '↘' },
+                { reg: /\bU\b/gi, val: '↑' },  { reg: /\bD\b/gi, val: '↓' },
+                { reg: /\bB\b/gi, val: '←' },  { reg: /\bF\b/gi, val: '→' }
+            ];
+            dirMap.forEach(m => s = s.replace(m.reg, m.val));
+
+            s = s.replace(/[\s,]+/g, ''); // 紧凑化
             
-            // 散装按键处理
-            let parts = s.split(',');
-            let result = parts.map(part => {
-                part = part.replace(/[~$]/g, ''); 
-                if (part.includes('_')) return part; // 已是宏则跳过
-                if (/^(F|B|U|D|DF|DB|UF|UB)$/.test(part)) return `_${part}_`; // 单方向
-                return part.replace(/([A-Z])/g, '^$1'); // 按键加 ^
-            });
-            return result.join('');
+            // 核心：把字母转换为 Ikemen GO 原生按钮图标 (如 x -> ^X)
+            s = s.replace(/([a-zA-Z])/g, '^$1');
+            s = s.toUpperCase(); // 图标宏必须是大写
+
+            s = s.replace(/\+/g, ' + '); // +号前后加空格
+            s = s.replace(/([↖↗↙↘↑↓←→])(\^)/g, '$1 $2'); // 箭头与按键图标之间加空格
+
+            return s.trim();
         }
 
-        // 核心编译引擎
-        function processCmdToDat() {
-            const rawCmd = document.getElementById('cmd-input').value;
-            if (!rawCmd.trim()) return alert('请先上传或粘贴 .cmd 文件内容！');
+        function getIkemenColorTag(hex) { return `<#${hex.substring(1).toLowerCase()}>`; }
 
-            const removeAI = document.getElementById('opt-remove-ai').checked;
-            const removeSingle = document.getElementById('opt-remove-single').checked;
-            const isIconMode = document.querySelector('input[name="display-mode"]:checked').value === 'icon';
-            const headerColorTag = getIkemenColorTag(document.getElementById('color-header').value);
+        // 核心异步编译
+        async function processCmdToDat() {
+            const input = document.getElementById('cmd-input').value;
+            if (!input.trim()) return alert('请先上传或粘贴 .cmd 文件内容！');
 
-            let resultDat = "; ==========================================\n";
-            resultDat += `; IKEMEN GO 专业出招表 (UTF-8)\n`;
-            resultDat += `; 模式: ${isIconMode ? '原生图标 (支持颜色/宏)' : '纯文字格式'}\n`;
-            resultDat += "; ==========================================\n\n";
-            
-            const lines = rawCmd.split('\n');
-            let i = 0, moveCount = 0;
-            let currentCategory = "Special Moves"; 
-            let pendingMoves = []; 
+            const btn = document.querySelector('.btn-primary');
+            const originalBtnText = btn.innerHTML;
+            btn.innerHTML = '⏳ 正在智能编译与网络翻译中...';
+            btn.style.opacity = '0.7';
+            btn.style.pointerEvents = 'none';
 
-            // 分类写入闭包
-            function flushCategory() {
-                if (pendingMoves.length > 0) {
-                    if (isIconMode) resultDat += `${headerColorTag}:${currentCategory}:</>\n`;
-                    else resultDat += `[ ${currentCategory} ]\n`;
-                    resultDat += pendingMoves.join('\n') + '\n\n';
-                    pendingMoves = [];
-                }
-            }
+            try {
+                const removeAI = document.getElementById('opt-remove-ai').checked;
+                const removeSingle = document.getElementById('opt-remove-single').checked;
+                const isIcon = document.querySelector('input[name="display-mode"]:checked').value === 'icon';
+                const lang = document.getElementById('opt-translate').value;
 
-            while (i < lines.length) {
-                let line = lines[i].trim();
-                
-                // 动态嗅探中文/英文技能分类注释 (排除常规代码行)
-                if (line.startsWith(';') && !line.includes('====')) {
-                    let catMatch = line.match(/;\s*(.*(?:super|special|hyper|ultimate|unique|throw|normal|必杀|超必杀|特殊|投|普攻).*)/i);
-                    if (catMatch) {
-                        let catName = catMatch[1].replace(/[-=;*~]/g, '').trim();
-                        if (catName.length > 0 && catName.length < 30) {
-                            flushCategory(); 
-                            currentCategory = catName;
+                const headerColor = document.getElementById('enable-color-header').checked ? getIkemenColorTag(document.getElementById('color-header').value) : '';
+                const moveColor = document.getElementById('enable-color-move').checked ? getIkemenColorTag(document.getElementById('color-move').value) : '';
+                const close = (isIcon && (headerColor || moveColor)) ? '</>' : '';
+
+                let result = "; ==========================================\n";
+                result += `; IKEMEN GO 专业出招表 (UTF-8)\n`;
+                result += `; 模式: ${isIcon ? '终极原生图标 (无下划线版)' : '精简纯文字'} | 在线机翻驱动\n`;
+                result += "; ==========================================\n\n";
+
+                const lines = input.split('\n');
+                let inBlock = false, mName = "", mCmd = "";
+                let currentCategory = "", pendingMoves = [];
+
+                async function flushCategoryAsync() {
+                    if (pendingMoves.length > 0) {
+                        if (currentCategory !== "") {
+                            let transCat = await fetchTranslation(currentCategory, lang);
+                            if (isIcon) result += `${headerColor}:${transCat}:${close}\n`;
+                            else result += `[ ${transCat} ]\n`;
                         }
+                        result += pendingMoves.join('\n') + '\n\n';
+                        pendingMoves = [];
                     }
                 }
 
-                // 抓取指令块
-                if (/^\[command\]/i.test(line)) {
-                    let moveName = "", commandStr = "";
-                    for (let j = 1; j <= 5 && (i + j) < lines.length; j++) {
-                        let subLine = lines[i + j].trim();
-                        let nameMatch = subLine.match(/^name\s*=\s*"(.*)"/i);
-                        if (nameMatch) moveName = nameMatch[1].trim();
-                        let cmdMatch = subLine.match(/^command\s*=\s*(.*)/i);
-                        if (cmdMatch) commandStr = cmdMatch[1].trim();
-                    }
-
-                    if (moveName && commandStr) {
-                        let isValid = true;
-                        if (removeAI && /ai/i.test(moveName)) isValid = false;
-                        if (removeSingle && /^[a-z]$/i.test(commandStr.replace(/[~$/]/g, '').trim())) isValid = false;
-
-                        if (isValid) {
-                            let finalStr = "";
-                            if (!isIconMode) {
-                                finalStr = `${moveName} -> ${formatCommandText(commandStr)}`;
-                            } else {
-                                // 模板格式：招式名称 + 制表符排版 + 宏指令
-                                finalStr = `${moveName}\t\t${formatCommandIcon(commandStr)}`;
+                for (let line of lines) {
+                    line = line.trim();
+                    
+                    if (line.startsWith(';') && !line.includes('====')) {
+                        let cat = line.match(/;\s*(.*(?:super|special|hyper|ultimate|unique|throw|normal|必杀|特殊|投|普攻).*)/i);
+                        if (cat) {
+                            let cName = cat[1].replace(/[-=;*~]/g, '').trim();
+                            if (cName.length > 0 && cName.length < 30) {
+                                await flushCategoryAsync();
+                                currentCategory = cName;
                             }
-                            pendingMoves.push(finalStr);
-                            moveCount++;
                         }
+                        continue;
+                    }
+
+                    if (line.startsWith('[')) {
+                        if (inBlock && mName && mCmd) {
+                            let isValid = true;
+                            if (removeAI && /ai/i.test(mName)) isValid = false;
+                            if (removeSingle && /^[a-z]$/i.test(mCmd.replace(/[~$/]/g, '').trim())) isValid = false;
+
+                            if (isValid) {
+                                let tName = await fetchTranslation(mName, lang);
+                                if (!isIcon) pendingMoves.push(`${tName} -> ${formatCmdText(mCmd)}`);
+                                else pendingMoves.push(`${moveColor}${tName}${close}\t\t${formatCmdIcon(mCmd)}`);
+                            }
+                        }
+                        mName = ""; mCmd = ""; inBlock = /^\[command\]/i.test(line);
+                        continue;
+                    }
+
+                    if (inBlock) {
+                        let nMatch = line.match(/^name\s*=\s*"?([^"]+?)"?\s*$/i);
+                        if (nMatch) mName = nMatch[1].trim();
+                        let cMatch = line.match(/^command\s*=\s*(.*)/i);
+                        if (cMatch) mCmd = cMatch[1].trim();
                     }
                 }
-                i++;
+
+                if (inBlock && mName && mCmd) {
+                    let isValid = true;
+                    if (removeAI && /ai/i.test(mName)) isValid = false;
+                    if (removeSingle && /^[a-z]$/i.test(mCmd.replace(/[~$/]/g, '').trim())) isValid = false;
+                    if (isValid) {
+                        let tName = await fetchTranslation(mName, lang);
+                        if (!isIcon) pendingMoves.push(`${tName} -> ${formatCmdText(mCmd)}`);
+                        else pendingMoves.push(`${moveColor}${tName}${close}\t\t${formatCmdIcon(mCmd)}`);
+                    }
+                }
+
+                await flushCategoryAsync();
+                
+                if(!result.includes('->') && !result.includes('\t\t')) result += `; 未能在源文件中解析到标准数据。\n`;
+                document.getElementById('dat-output').value = result;
+
+            } finally {
+                btn.innerHTML = originalBtnText;
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
             }
-            
-            flushCategory(); 
-            if (moveCount === 0) resultDat += `; 未能在源文件中解析到标准的 [Command] 数据。\n`;
-            
-            document.getElementById('dat-output').value = resultDat;
         }
     </script>
 </body>
